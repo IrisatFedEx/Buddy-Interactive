@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Buddy Interactive</title>
+  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#ffffff;
+      --card:#ffffff;
+      --text:#1f2430;
+      --muted:#6b7280;
+      --accent:#4d148c;
+      --accent-2:#ff6600;
+      --shadow: 0 10px 24px rgba(0,0,0,0.07), 0 2px 6px rgba(0,0,0,0.05);
+      --radius: 18px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; background:var(--bg);
+      font-family:'Assistant', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      color:var(--text);
+      display:flex; align-items:center; justify-content:center;
+      padding:18px;
+    }
+    .wrap{
+      width:min(900px, 100%);
+      display:grid; gap:18px;
+      grid-template-rows:auto 1fr auto;
+      min-height:560px;
+    }
+    header{
+      display:grid; gap:10px; place-items:center; text-align:center;
+    }
+    .title{
+      font-weight:800; letter-spacing:.2px; font-size:clamp(22px, 2.6vw, 30px);
+    }
+    .controls{ display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
+    button{
+      appearance:none; border:1px solid #e5e7eb; background:#fff; color:var(--text);
+      padding:.6rem .9rem; border-radius:12px; font-weight:800; font-size:14px; cursor:pointer;
+      box-shadow:0 1px 0 rgba(0,0,0,.02);
+      display:inline-flex; align-items:center; gap:8px;
+      transition: transform .06s ease, box-shadow .2s ease, border-color .2s ease;
+    }
+    button:hover{ box-shadow:var(--shadow); transform:translateY(-1px); }
+    button:active{ transform:translateY(0); }
+    button.primary{ background:var(--accent); color:#fff; border-color:transparent; }
+    button.secondary{ background:#fff; color:var(--accent); border-color:rgba(77,20,140,.25); }
+    button.ghost{ background:transparent; border-color:transparent; color:var(--muted); }
+
+    .deck{ position:relative; display:grid; place-items:center; }
+    .card{
+      width:min(820px, 100%);
+      min-height:430px;
+      background:var(--card);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      border:1px solid #edeef3;
+      position:relative;
+      padding: clamp(16px, 3.2vw, 28px);
+      overflow:hidden;
+    }
+    .card::before,
+    .card::after{
+      content:""; position:absolute; left:0; right:0; height:14px;
+      background:linear-gradient(90deg, var(--accent), var(--accent-2));
+      z-index:2;
+    }
+    .card::before{ top:0; }
+    .card::after{ bottom:0; }
+
+    .face{
+      position:absolute; inset:0; padding:clamp(16px, 3.2vw, 28px);
+      background:transparent; z-index:1;
+    }
+    .front{ opacity:1; transition:opacity .28s ease; }
+    .back{ opacity:0; pointer-events:none; transition:opacity .28s ease; }
+    .card.show-back .front{ opacity:0; pointer-events:none; }
+    .card.show-back .back{ opacity:1; pointer-events:auto; }
+
+    .front-center{
+      position:absolute; top:50%; left:50%;
+      transform:translate(-50%, -50%);
+      width:min(700px, 90%);
+      display:flex; flex-direction:column; align-items:center; gap:14px;
+      text-align:center;
+    }
+    .lead{ font-size:clamp(22px, 3vw, 30px); font-weight:800; color:var(--accent); }
+    .q{ font-size:clamp(22px, 3.2vw, 32px); line-height:1.5; font-weight:800; color:var(--accent-2); }
+    .divider{ height:2px; width:160px; background:rgba(77,20,140,0.15); }
+
+    .back{ padding:0; }
+    .mantra{
+      position:absolute; inset:0;
+      display:grid; place-items:center;
+      text-align:center;
+      font-weight:900;
+      font-size:clamp(34px, 5vw, 54px);
+      letter-spacing:.3px;
+      color:#fff;
+      padding:24px;
+    }
+    .bg-purple{ background:var(--accent); }
+    .bg-orange{ background:var(--accent-2); }
+
+    .meta{
+      position:absolute; left:50%; bottom:18px; transform:translateX(-50%);
+      display:flex; align-items:center; justify-content:center; gap:10px;
+      color:var(--muted); font-size:14px;
+      width:90%;
+    }
+    .progress{
+      height:10px; flex: 0 0 min(600px, 92%); background:#ececf4; border-radius:999px; overflow:hidden;
+      box-shadow: inset 0 1px 2px rgba(0,0,0,.05);
+    }
+    .bar{height:100%; width:0; background:linear-gradient(90deg, var(--accent), var(--accent-2));}
+
+    footer{
+      display:grid; place-items:center; color:var(--muted); text-align:center;
+    }
+    .hint{ font-size:12px;}
+    .kbd{
+      font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      background:#fff; border:1px solid #e5e7eb; padding:.1rem .3rem; border-radius:6px; box-shadow:0 1px 0 rgba(0,0,0,.02);
+    }
+
+    .swap{ animation: swapOnce .5s ease both; }
+    @keyframes swapOnce{
+      0%{ opacity:0; transform: translateZ(0) rotateX(-8deg); }
+      100%{ opacity:1; transform: translateZ(0) rotateX(0deg); }
+    }
+
+    .overlay{ position:absolute; inset:0; display:grid; place-items:center; text-align:center; z-index:3; }
+    .is-hidden{ display:none !important; }
+    .splash-inner{
+      display:grid; gap:14px; place-items:center;
+      width:100%; height:100%;
+      background: radial-gradient(1200px 600px at 50% 30%, rgba(77,20,140,0.08), transparent),
+                  radial-gradient(1000px 500px at 50% 70%, rgba(255,102,0,0.08), transparent);
+    }
+    .splash-title{ font-size:clamp(36px, 5.4vw, 64px); font-weight:900; letter-spacing:.4px; color:var(--accent); }
+    .splash-sub{ font-size:clamp(22px, 3.2vw, 36px); font-weight:800; color:var(--accent-2); }
+    .splash-art{ display:grid; grid-auto-flow:column; gap:8px; }
+    .tile{ width:18px; height:18px; border-radius:4px; background:linear-gradient(90deg, var(--accent), var(--accent-2)); opacity:.9; }
+
+    .finale-inner{
+      width:100%; height:100%; display:grid; place-items:center;
+      background:linear-gradient(90deg, var(--accent), var(--accent-2));
+      color:#fff; font-weight:900; font-size:clamp(28px, 4.2vw, 50px);
+      letter-spacing:.3px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="title">Buddy Interactive</div>
+      <div class="controls">
+        <button id="prevBtn" aria-label="Previous">◀ Prev</button>
+        <button id="nextBtn" class="secondary" aria-label="Next">Next ▶</button>
+        <button id="shuffleBtn" class="ghost" aria-label="Shuffle">Shuffle</button>
+        <button id="flipBtn" class="primary" aria-label="Flip">Flip</button>
+      </div>
+    </header>
+
+    <section class="deck">
+      <div class="card" id="card">
+        <div class="face front" id="frontFace">
+          <div class="front-center">
+            <div class="lead" id="lead"></div>
+            <div class="divider"></div>
+            <div class="q" id="q"></div>
+          </div>
+          <div class="meta">
+            <div id="counter"></div>
+            <div class="progress"><div class="bar" id="bar"></div></div>
+          </div>
+          <!-- Splash -->
+          <div class="overlay splash" id="splash">
+            <div class="splash-inner">
+              <div class="splash-art">
+                <span class="tile"></span><span class="tile"></span><span class="tile"></span><span class="tile"></span><span class="tile"></span>
+              </div>
+              <div class="splash-title">Buddy Interactive</div>
+              <div class="splash-sub">Inspiration game</div>
+            </div>
+          </div>
+          <!-- Finale -->
+          <div class="overlay finale is-hidden" id="finale">
+            <div class="finale-inner">💜 Keep inspiring each other</div>
+          </div>
+        </div>
+        <div class="face back">
+          <div class="mantra bg-purple" id="mantra">Follow your dreams</div>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <div class="hint"><span class="kbd">Space</span> = Flip, <span class="kbd">&#8592;</span>/<span class="kbd">&#8594;</span> = Prev/Next, <span class="kbd">S</span> = Shuffle</div>
+    </footer>
+  </div>
+
+  <script>
+    const items = [
+      { lead:"כשמקשיבים באמת – לומדים.", q:"איזו תובנה קיבלת מעובד חדש שזכורה לך במיוחד?" },
+      { lead:"רגעים קטנים עושים את היום.", q:"למי היית רוצה לפרגן על משהו קטן שעשה לך טוב השבוע?" },
+      { lead:"כל מפגש עם עובד חדש הוא הזדמנות להשפיע לטובה.", q:"מה הדבר הקטן שאת/ה עושה כדי לגרום לעובדים חדשים להרגיש בנוח כבר מהיום הראשון?" },
+      { lead:"לפעמים דווקא המחווה הקטנה זכורה הכי טוב.", q:"איזה רגע קליטה מרגש או מצחיק את/ה זוכר/ת במיוחד?" },
+      { lead:"באדי טוב הוא לא רק מדריך – הוא אדם שמקשיב באמת.", q:"איך את/ה גורם/ת לעובד החדש להרגיש נוח לשתף אותך?" },
+      { lead:"טעויות הן חלק מהלמידה.", q:"ספר/י על טעות שלימדה אותך משהו חשוב מקצועית." },
+      { lead:"אנשים זוכרים איך גרמנו להם להרגיש.", q:"מתי קיבלת שירות מצוין — ומה לקחת מזה לעבודה שלך?" },
+      { lead:"יש באדיז שאוהבים לתכנן הכול מראש, ויש כאלה שזורמים.", q:"איך את/ה מוצא/ת את האיזון בין תכנון לשיחה טבעית?" },
+      { lead:"שאלות טובות מייצרות למידה.", q:"איזו שאלה היית רוצה לשאול קולגה ותמיד דחית?" },
+      { lead:"שגרות יוצרות ביטחון.", q:"איזה הרגל יומי קצר עוזר לך לפתוח את היום בפוקוס?" },
+      { lead:"תמיכה אמיתית לא נמדדת בזמן – אלא בכוונה.", q:"איך את/ה שומר/ת על קשר עם העובד גם אחרי שהוא כבר השתלב?" },
+      { lead:"גם באדי צריך באדי.", q:"למי את/ה פונה כשאת/ה רוצה לשתף או להתייעץ?" },
+      { lead:"קליטה טובה היא לא רק אחריות של באדי אחד.", q:"איך את/ה מערב/ת אחרים בתהליך הקליטה?" },
+      { lead:"שפה משותפת מקצרת תהליכים.", q:"איזה מושג פנימי או קיצור מבלבל אותך או דרש ממך זמן להבין?" },
+      { lead:"איזון יוצר אנרגיה טובה.", q:"מה נותן לך דלק באמצע היום — הליכה קצרה, מוזיקה, או משהו אחר?" },
+      { lead:"כל קליטה מלמדת גם את הבאדי משהו חדש.", q:"מה גילית על עצמך מאז שהתחלת ללוות עובדים?" },
+      { lead:"קליטה היא לא רק מידע – היא חוויה.", q:"מה את/ה עושה כדי להפוך את הימים הראשונים ליותר קלים או כיפיים?" },
+      { lead:"באדי הוא הפנים הראשונות של החברה.", q:"איך את/ה מנסה לשקף את התרבות והערכים שלנו דרך הדרך שבה את/ה מלווה?" },
+      { lead:"משוב הוא מתנה, גם לבאדי.", q:"איזה משוב שקיבלת מעובד חדש השפיע עליך?" },
+      { lead:"לפעמים גם באדי נבוך.", q:"מתי הרגשת פחות בטוח/ה בתפקיד – ואיך התמודדת?" },
+      { lead:"כשיש אמון – הכול יותר קל.", q:"איך את/ה בונה אמון עם מישהו שעדיין כמעט לא מכיר אותך?" },
+      { lead:"רגעי הצלחה נותנים כוח.", q:"ספר/י על הצלחה קטנה שלך כבאדי שגרמה לך לחייך." },
+      { lead:"לכל אחד יש סגנון באדיות אחר.", q:"איך היית מגדיר/ה את ה“באדי-סטייל” שלך בשלוש מילים?" },
+      { lead:"גם שיחות קטנות הן גשרים גדולים.", q:"על מה את/ה אוהב/ת לדבר עם עובד חדש חוץ מענייני עבודה?" },
+      { lead:"כל באדי הוא שגריר של אנרגיה טובה.", q:"מה הדבר שאת/ה הכי גאה בו בסביבת העבודה שלנו?" },
+      { lead:"סיום קליטה הוא לא סוף, אלא התחלה של קשר.", q:"איך את/ה ממשיך/ה לשמור על קשר אחרי שהעובד כבר “פחות צריך” אותך?" },
+      { lead:"יום טוב מתחיל באווירה טובה.", q:"מה עוזר לך לפתוח את היום באנרגיות טובות?" },
+      { lead:"כולנו צריכים רגע לנשום.", q:"איך את/ה טוען/ת מצברים באמצע יום לחוץ?" },
+      { lead:"תמיד יש את האדם הזה שמרים את האווירה.", q:"מי זה אצלך בעבודה – ואיך את/ה עושה את זה לאחרים?" },
+      { lead:"גם יום עמוס עובר יותר בקלות כשיש מישהו לדבר איתו.", q:"עם מי את/ה הכי אוהב/ת להתייעץ או לשתף?" },
+      { lead:"כולנו לומדים כל הזמן – גם בלי לשים לב.", q:"מה למדת לאחרונה בעבודה (גם אם זה משהו קטן)?" },
+      { lead:"פרגון קטן עושה הבדל גדול.", q:"למי היית רוצה לפרגן עכשיו?" },
+      { lead:"גם אם הכול רץ – שווה לעצור רגע.", q:"על מה את/ה גאה בעצמך בזמן האחרון?" },
+      { lead:"השראה לפעמים מגיעה ממקום לא צפוי.", q:"מה או מי נתן לך השראה השבוע?" },
+      { lead:"מנטור טוב גורם לך לרצות להיות כמוהו.", q:"מי היה מודל השראה עבורך — גם אם לא קראת לו “מנטור”?" },
+      { lead:"לפעמים הקשבה אחת שווה יותר מפתרון.", q:"מתי לאחרונה רק הקשבת — בלי להציע פתרון?" }
+    ];
+
+    const mantras = [
+      "Follow your dreams","Breathe","Keep Going","Make it happen","Smile","Enjoy the moment",
+      "Be kind","Stay curious","Choose happiness","Shine bright","Let it go","Live Fully","Just dance","Believe in yourself"
+    ];
+
+    const card = document.getElementById('card');
+    const frontFace = document.getElementById('frontFace');
+    const lead = document.getElementById('lead');
+    const q = document.getElementById('q');
+    const counter = document.getElementById('counter');
+    const bar = document.getElementById('bar');
+    const mantraEl = document.getElementById('mantra');
+    const splash = document.getElementById('splash');
+    const finale = document.getElementById('finale');
+
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const shuffleBtn = document.getElementById('shuffleBtn');
+    const flipBtn = document.getElementById('flipBtn');
+
+    let idx = 0;
+    let mantraIdx = 0;
+    let showingBack = false;
+    let showFinale = false;
+    let showSplash = true;
+
+    function updateProgress(){
+      if(showSplash){
+        counter.textContent = `Start • 0 / ${items.length}`;
+        bar.style.width = '0%';
+      } else if(showFinale){
+        counter.textContent = 'End';
+        bar.style.width = '100%';
+      } else {
+        counter.textContent = `${idx+1} / ${items.length}`;
+        bar.style.width = (((idx+1)/items.length)*100) + '%';
+      }
+    }
+
+    function render(){
+      splash.classList.toggle('is-hidden', !showSplash);
+      finale.classList.toggle('is-hidden', !showFinale);
+      if(showSplash || showFinale){
+        lead.textContent = '';
+        q.textContent = '';
+      } else {
+        const it = items[idx];
+        lead.textContent = it.lead;
+        q.textContent = it.q;
+      }
+      updateProgress();
+    }
+
+    function playSwap(){
+      frontFace.classList.remove('swap');
+      void frontFace.offsetWidth;
+      frontFace.classList.add('swap');
+      setTimeout(()=> frontFace.classList.remove('swap'), 520);
+    }
+
+    function setMantra(){
+      mantraEl.textContent = mantras[mantraIdx % mantras.length];
+      mantraEl.classList.remove('bg-purple','bg-orange');
+      const pickPurple = Math.random() < 0.5;
+      mantraEl.classList.add(pickPurple ? 'bg-purple' : 'bg-orange');
+    }
+
+    function flip(){
+      if(showSplash || showFinale) return;
+      mantraIdx = (mantraIdx + 1) % mantras.length;
+      setMantra();
+      showingBack = !showingBack;
+      card.classList.toggle('show-back', showingBack);
+    }
+
+    function next(){
+      if(showingBack){ showingBack=false; card.classList.remove('show-back'); }
+      if(showSplash){ showSplash=false; idx=0; render(); playSwap(); return; }
+      if(showFinale){ showFinale=false; idx=0; render(); playSwap(); return; }
+      if(idx === items.length - 1){
+        showFinale = true;
+        render();
+        return;
+      }
+      idx = idx + 1;
+      render();
+      playSwap();
+    }
+
+    function prev(){
+      if(showingBack){ showingBack=false; card.classList.remove('show-back'); }
+      if(showSplash){ return; }
+      if(showFinale){ showFinale=false; idx = items.length - 1; render(); playSwap(); return; }
+      if(idx === 0){ showSplash = true; render(); return; }
+      idx = idx - 1;
+      render();
+      playSwap();
+    }
+
+    function shuffle(){
+      if(showingBack){ showingBack=false; card.classList.remove('show-back'); }
+      showFinale = false;
+      showSplash = false;
+      for(let i = items.length-1; i>0; i--){
+        const j = Math.floor(Math.random()*(i+1));
+        [items[i], items[j]] = [items[j], items[i]];
+      }
+      idx = 0;
+      render();
+      playSwap();
+    }
+
+    prevBtn.addEventListener('click', prev);
+    nextBtn.addEventListener('click', next);
+    shuffleBtn.addEventListener('click', shuffle);
+    flipBtn.addEventListener('click', flip);
+
+    window.addEventListener('keydown', (e)=>{
+      if(e.key === 'ArrowRight') next();
+      else if(e.key === 'ArrowLeft') prev();
+      else if(e.key.toLowerCase() === 's') shuffle();
+      else if(e.code === 'Space'){ e.preventDefault(); flip(); }
+    });
+
+    render();
+    setMantra();
+  </script>
+</body>
+</html>
